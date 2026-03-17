@@ -1,0 +1,8 @@
+# Entorno virtual
+venv/
+
+# Archivo de seguimiento de pasos durante el desarrollo
+dev_guide.md
+
+# Variables de entorno
+.env
