@@ -2,7 +2,15 @@
 venv/
 
 # Archivo de seguimiento de pasos durante el desarrollo
-dev_guide.md
+fases_implementacion.md
 
 # Variables de entorno
 .env
+
+# Instrucciones de agente
+.github\
+.github/
+
+# caché de python y node
+__pycache__/
+node_modules/
