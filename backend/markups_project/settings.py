@@ -14,7 +14,6 @@ environ.Env.read_env(BASE_DIR.parent / '.env')
 
 SECRET_KEY = env('SECRET_KEY')
 
-# En producción SIEMPRE debe ser False (exponer errores es un riesgo).
 DEBUG = env('DEBUG')
 
 # ALLOWED_HOSTS: lista de dominios que pueden acceder al backend.
@@ -90,7 +89,8 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        # 'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -103,7 +103,7 @@ REST_FRAMEWORK = {
 # - 7 días: si el usuario usa la app en una semana, no necesita volver a loguearse.
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -112,6 +112,7 @@ SIMPLE_JWT = {
 # En producción el dominio real irá aquí (ej: https://mi-app.vercel.app)
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',   # Vite dev server
+    'http://127.0.0.1:5173',
     'http://localhost:3000',   # Por si usas Create React App o puerto alternativo
 ]
 

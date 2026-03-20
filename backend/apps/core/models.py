@@ -1,4 +1,3 @@
-# ...existing code...
 from django.db import models
 
 
@@ -9,6 +8,10 @@ class Rol(models.Model):
     abreviatura = models.CharField(max_length=10, blank=True)
     descripcion = models.TextField(blank=True)
 
+    class Meta:
+        verbose_name = "Rol"
+        verbose_name_plural = "Roles"
+
     def __str__(self):
         return self.nombre
 
@@ -18,6 +21,10 @@ class Area(models.Model):
 
     nombre = models.CharField(max_length=100, unique=True)
     acronimo = models.CharField(max_length=10, blank=True)
+
+    class Meta:
+        verbose_name = "Área"
+        verbose_name_plural = "Áreas"
 
     def __str__(self):
         # Retornar Acronimo + nombre
@@ -40,9 +47,22 @@ class EstadoMarkup(models.Model):
 
     class Meta:
         ordering = ['orden']
+        verbose_name = "Estado de Markup"
+        verbose_name_plural = "Estados de Markup"
 
     def __str__(self):
         return self.nombre
+
+class TipoMarkup(models.Model):
+    num_tipo = models.CharField(max_length=10, unique=True)
+    descripcion = models.CharField(max_length=100)
+
+    class Meta:
+        verbose_name = "Tipo de Markup"
+        verbose_name_plural = "Tipos de Markup"
+    
+    def __str__(self):
+        return f"{self.num_tipo} - {self.descripcion}"
 
 
 class Empleado(models.Model):
@@ -63,4 +83,4 @@ class Empleado(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.nombre} <{self.email}>"
+        return f"{self.nombre} <{self.numero_empleado}>"

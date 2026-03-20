@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Rol, Area, EstadoMarkup, Empleado
+from .models import Rol, Area, EstadoMarkup, Empleado, TipoMarkup
 
 
 @admin.register(Rol)
@@ -15,6 +15,10 @@ class AreaAdmin(admin.ModelAdmin):
 @admin.register(EstadoMarkup)
 class EstadoMarkupAdmin(admin.ModelAdmin):
 	list_display = ('nombre', 'orden')
+
+@admin.register(TipoMarkup)
+class TipoMarkupAdmin(admin.ModelAdmin):
+	list_display = ('num_tipo', 'descripcion')
 
 
 @admin.register(Empleado)
