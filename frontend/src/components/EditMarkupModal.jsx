@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { markupService } from '../services/api';
+import { Toaster, toast } from 'sonner';
 
 function EditMarkupModal({ markup, isOpen, onClose, onUpdate, options }) {
   const [formData, setFormData] = useState(markup);
@@ -11,25 +12,32 @@ function EditMarkupModal({ markup, isOpen, onClose, onUpdate, options }) {
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await markupService.update(markup.id, formData);
-      onUpdate();
-      onClose();
-    } catch (err) {
-      alert("Error al actualizar");
-    }
-  };
+  e.preventDefault();
+  try {
+    // 1. Guardamos la respuesta del servidor (el objeto actualizado)
+    const response = await markupService.update(markup.id, formData);
+    
+    // 2. Le pasamos ese objeto específico a la función onUpdate
+    // Django nos devuelve el registro completo con sus detalles
+    onUpdate(response.data); 
+    
+    onClose();
+  } catch (err) {
+    toast.error("Error al actualizar en el servidor");
+    console.error(err);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
         <div className="bg-gray-800 p-4 text-white flex justify-between items-center">
-          <h3 className="font-bold">Editar Markup: {markup.numero_parte}</h3>
+          <h3 className="font-bold">Editar Markup: #{markup.id} - {markup.numero_parte}</h3>
           <button onClick={onClose} className="hover:text-gray-300">✕</button>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase">Estado del Proceso</label>
             <select 

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://127.0.0.1:8000/api/',
-  timeout: 15000, // Si el server no responde en 5s, cancela
+  timeout: 15000, 
 });
 
 export const coreService = {
@@ -12,9 +12,11 @@ export const coreService = {
 };
 
 export const markupService = {
-  getAll: () => api.get('markups/'),
+  getAll: (search = '') => api.get('markups/', { 
+    params: search ? { search } : {} 
+  }),
   create: (data) => api.post('markups/', data),
-  update: (id, data) => api.patch(`markups/${id}/`, data), 
+  update: (id, data) => api.patch(`markups/${id}/`, data),
 };
 
 export default api;

@@ -1,146 +1,114 @@
 import { useEffect, useState, useCallback } from 'react';
-import { markupService, coreService } from './services/api'; // Añadí coreService para los estados
-import MarkupForm from './components/MarkupForm';
-import CommentSection from './components/CommentSection';
-import EditMarkupModal from './components/EditMarkupModal'; // El nuevo componente
-import { Pencil, MessageSquare } from 'lucide-react';
+import { markupService, coreService } from './services/api';
+import Sidebar from './components/Sidebar';
+import MarkupFormModal from './components/MarkupFormModal';
+import EditMarkupModal from './components/EditMarkupModal';
+import { MessageSquare, Search, Plus, Zap, Clock } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
+
+const getEstadoEstilo = (nombre) => {
+  const base = "px-3 py-1 text-[10px] font-black rounded-full border uppercase tracking-widest ";
+  switch (nombre?.toLowerCase()) {
+    case 'abierto': return base + "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    case 'en proceso': return base + "bg-warning/10 text-warning border-warning/20";
+    case 'finalizado': return base + "bg-safe/10 text-safe border-safe/20";
+    default: return base + "bg-surface-light text-text-secondary border-border-dark";
+  }
+};
 
 function App() {
   const [markups, setMarkups] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
-  const [editingMarkup, setEditingMarkup] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [options, setOptions] = useState({ estados: [] });
+  const [editingMarkup, setEditingMarkup] = useState(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [options, setOptions] = useState({ estados: [], tipos: [] });
 
-  const fetchMarkups = useCallback(async () => {
+  const fetchMarkups = useCallback(async (query = '') => {
+    setLoading(true);
     try {
-      const res = await markupService.getAll();
+      const res = await markupService.getAll(query);
       setMarkups(res.data.results || res.data);
     } catch (err) {
-      console.error("Error cargando tabla:", err);
+      toast.error("Error de conexión");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Cargamos los estados para que el Modal de edición tenga las opciones
   useEffect(() => {
-    const loadData = async () => {
+    const loadOptions = async () => {
       try {
-        const res = await coreService.getEstados();
-        setOptions({ estados: res.data.results || res.data });
-      } catch (err) {
-        console.error("Error cargando estados:", err);
-      }
+        const [resEst, resTip] = await Promise.all([
+          coreService.getEstados(),
+          coreService.getTipos() // Asegúrate de tener este método en api.js
+        ]);
+        setOptions({ 
+          estados: resEst.data.results || resEst.data,
+          tipos: resTip.data.results || resTip.data 
+        });
+      } catch (err) { console.error(err); }
     };
-    loadData();
+    loadOptions();
     fetchMarkups();
   }, [fetchMarkups]);
 
-  const toggleRow = (id) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
-
-  const handleEditClick = (markup) => {
-    // Oscar, aquí simulamos que tu ID de usuario es 1
-    const USUARIO_ACTUAL_ID = 1; 
-    
-    // IMPORTANTE: Comparamos contra el ID numérico del responsable
-    if (markup.responsable !== USUARIO_ACTUAL_ID) {
-      alert(`⚠️ Acceso Denegado: Solo el responsable (${markup.responsable_detalle?.nombre}) puede editar este registro.`);
-      return;
-    }
-  
-    setEditingMarkup(markup);
-    setIsModalOpen(true);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-8 text-center md:text-left">
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">MarkUp Tracker</h1>
-          <p className="text-gray-500 text-lg">Sistema de Control de Cambios de Ingeniería</p>
+    <div className="flex h-screen w-full bg-background-dark text-white font-sans overflow-hidden">
+      <Toaster position="top-right" richColors theme="dark" />
+      <Sidebar />
+
+      <main className="flex-1 flex flex-col h-full overflow-y-auto bg-surface-dark/40">
+        <header className="flex items-center justify-between px-8 py-6 border-b border-border-dark bg-surface-dark/80 backdrop-blur-md sticky top-0 z-10">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-white uppercase italic">MarkUp Tracker</h2>
+            <p className="text-text-secondary text-[10px] font-black uppercase tracking-widest">Navico Engineering</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
+              <input type="text" placeholder="Buscar P/N..." className="bg-surface-light/30 border border-border-dark rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary outline-none w-64" onChange={(e) => fetchMarkups(e.target.value)} />
+            </div>
+            <button onClick={() => setIsCreateModalOpen(true)} className="bg-primary text-background-dark px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(97,237,220,0.3)]">
+              <Plus size={18} /> Nuevo Registro
+            </button>
+          </div>
         </header>
 
-        <MarkupForm onMarkupCreated={fetchMarkups} />
+        <div className="p-8 max-w-[1400px] mx-auto w-full space-y-8 pb-20">
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <StatCard label="Total Markups" value={markups.length} icon={<Zap size={18}/>} color="text-primary" />
+            <StatCard label="Abiertos" value={markups.filter(m => m.estado_detalle?.nombre === 'Abierto').length} icon={<Clock size={18}/>} color="text-blue-400" />
+          </section>
 
-        <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
-          {loading ? (
-            <div className="p-10 text-center text-gray-400 animate-pulse font-medium">
-              Sincronizando con el servidor de Navico...
-            </div>
-          ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-800 text-white">
+          <div className="bg-surface-light/10 border border-border-dark rounded-2xl overflow-hidden shadow-xl">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-surface-light/40 text-text-secondary text-[10px] font-black uppercase tracking-widest border-b border-border-dark">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">N° Parte / Edición</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">Rev</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">Responsable</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold uppercase tracking-wider">Comentarios</th>
+                  <th className="px-6 py-4">N° Parte / Rev</th>
+                  <th className="px-6 py-4">Responsable</th>
+                  <th className="px-6 py-4">Estado</th>
+                  <th className="px-6 py-4 text-center">Acciones</th>
                 </tr>
               </thead>
-              
-              {markups.map((m) => (
-                <tbody key={m.id} className="divide-y divide-gray-100 border-b last:border-b-0">
-                  <tr 
-                    onClick={() => toggleRow(m.id)}
-                    className={`cursor-pointer transition-colors ${expandedId === m.id ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
-                  >
-                    <td className="px-6 py-4 font-bold text-gray-900">
-                      <div className="flex items-center gap-3">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditClick(m);
-                          }}
-                          className="p-2 bg-white border border-gray-200 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg transition-all shadow-sm"
-                          title="Editar Registro"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <span>{m.numero_parte}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-gray-600 font-mono font-medium">{m.nueva_revision}</td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-gray-800">{m.responsable_detalle?.nombre}</div>
-                      <div className="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">{m.responsable_detalle?.area_detalle?.acronimo}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 text-[11px] font-black rounded-full bg-blue-100 text-blue-700 border border-blue-200 uppercase">
-                        {m.estado_detalle?.nombre}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="flex items-center gap-1.5 text-blue-600 font-bold text-sm">
-                        <MessageSquare size={14} />
-                        {m.comentarios?.length || 0}
-                      </span>
-                    </td>
+              <tbody className="divide-y divide-border-dark/30">
+                {markups.map((m) => (
+                  <tr key={m.id} className="hover:bg-white/5 transition-colors cursor-pointer" onClick={() => {setEditingMarkup(m); setIsModalOpen(true);}}>
+                    <td className="px-6 py-4 font-bold text-sm">{m.numero_parte} <span className="text-primary/50 text-xs ml-2">{m.nueva_revision}</span></td>
+                    <td className="px-6 py-4 text-sm text-text-secondary">{m.responsable_detalle?.nombre}</td>
+                    <td className="px-6 py-4"><span className={getEstadoEstilo(m.estado_detalle?.nombre)}>{m.estado_detalle?.nombre}</span></td>
+                    <td className="px-6 py-4 text-center text-text-secondary"><MessageSquare size={16} className="mx-auto" /></td>
                   </tr>
-
-                  {expandedId === m.id && (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-4 bg-gray-50/50">
-                        <CommentSection 
-                          markupId={m.id} 
-                          initialComments={m.comentarios || []} 
-                          onCommentAdded={fetchMarkups} 
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              ))}
+                ))}
+              </tbody>
             </table>
-          )}
+            {loading && <div className="p-10 text-center animate-pulse text-[10px] font-black uppercase tracking-[0.3em]">Cargando...</div>}
+          </div>
         </div>
-      </div>
+      </main>
 
-      {/* MODAL DE EDICIÓN */}
+      <MarkupFormModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onMarkupCreated={fetchMarkups} options={options} />
+      
       {isModalOpen && (
         <EditMarkupModal 
           markup={editingMarkup} 
@@ -153,5 +121,13 @@ function App() {
     </div>
   );
 }
+
+const StatCard = ({ label, value, icon, color }) => (
+  <div className="bg-surface-light/20 border border-border-dark rounded-2xl p-5 hover:border-primary/20 transition-all">
+    <div className={`p-2 w-fit rounded-xl bg-surface-dark mb-4 ${color}`}>{icon}</div>
+    <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest">{label}</p>
+    <p className="text-2xl font-black text-white mt-1">{value}</p>
+  </div>
+);
 
 export default App;

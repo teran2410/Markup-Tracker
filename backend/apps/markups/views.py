@@ -8,5 +8,5 @@ class MarkupViewSet(viewsets.ModelViewSet):
     
     # Capacidades de búsqueda y filtrado
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['numero_parte', 'responsable__nombre']
+    search_fields = ['numero_parte', 'responsable__nombre', 'descripcion']
     ordering_fields = ['fecha_creacion', 'fecha_compromiso']
