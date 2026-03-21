@@ -1,16 +1,24 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import Markup
-from apps.core.serializers import EmpleadoSerializer, EstadoMarkupSerializer, AreaSerializer
+from apps.core.serializers import EmpleadoSerializer, EstadoMarkupSerializer, AreaSerializer, TipoMarkupSerializer
+from apps.comments.serializers import ComentarioSerializer
 
 class MarkupSerializer(serializers.ModelSerializer):
     # Campos de solo lectura para mostrar info detallada en el GET
     responsable_detalle = EmpleadoSerializer(source='responsable', read_only=True)
     estado_detalle = EstadoMarkupSerializer(source='estado', read_only=True)
-    
+    comentarios = ComentarioSerializer(many=True, read_only=True)
+    tipo_markup_detalle = TipoMarkupSerializer(source='tipo_markup', read_only=True)
+
     class Meta:
         model = Markup
-        fields = '__all__'
+        fields = [
+            'id', 'numero_parte', 'descripcion', 'nueva_revision', 
+            'url_archivo', 'responsable', 'responsable_detalle', 
+            'estado', 'estado_detalle', 'tipo_markup', 'tipo_markup_detalle', 'comentarios',
+            'fecha_creacion', 'fecha_compromiso'
+        ]
 
     # VALIDACIÓN PERSONALIZADA (Nivel Backend)
     def validate_fecha_compromiso(self, value):
@@ -24,7 +32,7 @@ class MarkupSerializer(serializers.ModelSerializer):
         if self.context['request'].method == 'POST':
             exists = Markup.objects.filter(
                 numero_parte=data['numero_parte'],
-                estado__nombre__in=['Abierto', 'En proceso', 'En firmas', 'Configuration Check', 'Pending Approval']
+                estado__nombre__in=['Abierto', 'En proceso', 'En firmas', 'Configuration Check', 'Pending Approval'],
             ).exists()
             if exists:
                 raise serializers.ValidationError(

@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class Rol(models.Model):
     # Rol de un empleado (p. ej. técnico, supervisor, admin).
 

@@ -1,17 +1,20 @@
 import axios from 'axios';
 
-// Creamos la instancia apuntando a Django
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/',
+  baseURL: 'http://127.0.0.1:8000/api/',
+  timeout: 15000, // Si el server no responde en 5s, cancela
 });
 
-// Definimos los servicios para la app de Markups
+export const coreService = {
+  getEmpleados: () => api.get('empleados/'),
+  getEstados: () => api.get('estados-markup/'),
+  getTipos: () => api.get('tipos-markup/'),
+};
+
 export const markupService = {
-  // GET a /api/markups/
   getAll: () => api.get('markups/'),
-  
-  // POST a /api/markups/
   create: (data) => api.post('markups/', data),
+  update: (id, data) => api.patch(`markups/${id}/`, data), 
 };
 
 export default api;
