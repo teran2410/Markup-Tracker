@@ -1,3 +1,5 @@
+// MarkupFormModal.jsx
+
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { markupService } from '../services/api';
@@ -25,8 +27,24 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // 1. Cerramos el modal inmediatamente para dar sensación de velocidad
+
+    // 1. Buscamos el texto del tipo seleccionado para que la tabla no se vea vacía
+    const tipoSeleccionado = options.tipos?.find(t => t.id === parseInt(formData.tipo_markup));
+
+    // 2. Creamos el objeto OPTIMISTA (instantáneo)
+    const optimisticMarkup = {
+      id: Date.now(), // ID temporal
+      numero_parte: formData.numero_parte,
+      nueva_revision: formData.nueva_revision,
+      descripcion: formData.descripcion,
+      responsable_detalle: { nombre: "Oscar Teran" },
+      estado_detalle: { nombre: "Abierto" },
+      tipo_detalle: { descripcion: tipoSeleccionado?.descripcion || '' },
+      isOptimistic: true // Bandera para estilo visual
+    };
+
+    // 3. Lo mandamos al padre y cerramos el modal YA
+    onMarkupCreated(optimisticMarkup); 
     onClose();
 
     try {
@@ -37,26 +55,19 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
         tipo_markup: parseInt(formData.tipo_markup)
       };
 
-      // 2. Ejecutamos la creación
+      // 4. Se guarda en segundo plano
       await markupService.create(payload);
+      toast.success("Markup guardado en servidor");
       
-      // 3. Notificamos al padre para que refresque la lista (onMarkupCreated)
-      onMarkupCreated(); 
-      
-      toast.success("Markup registrado exitosamente");
-      
-      // Limpiamos el form para la próxima vez
+      // Limpiamos el form
       setFormData({
-        numero_parte: '',
-        nueva_revision: '',
-        descripcion: '',
-        responsable: OSCAR_ID,
-        tipo_markup: '',
-        fecha_compromiso: ''
+        numero_parte: '', nueva_revision: '', descripcion: '',
+        responsable: OSCAR_ID, tipo_markup: '', fecha_compromiso: ''
       });
     } catch (err) {
       console.error("Error:", err.response?.data);
-      toast.error("Error al sincronizar. Revisa los datos.");
+      toast.error("Error al sincronizar con la base de datos");
+      // Aquí podrías disparar un refresh forzado para quitar el optimista si falló
     }
   };
 
@@ -97,7 +108,6 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
                 onChange={(e) => setFormData({...formData, tipo_markup: e.target.value})}
               >
                 <option value="">Seleccionar...</option>
-                {/* CORRECCIÓN: Usando t.descripcion en lugar de t.nombre */}
                 {options.tipos?.map(t => (
                   <option key={t.id} value={t.id} className="bg-surface-dark">{t.descripcion}</option>
                 ))}

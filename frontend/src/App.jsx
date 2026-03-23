@@ -3,16 +3,18 @@ import { markupService, coreService } from './services/api';
 import Sidebar from './components/Sidebar';
 import MarkupFormModal from './components/MarkupFormModal';
 import EditMarkupModal from './components/EditMarkupModal';
-import { MessageSquare, Search, Plus, Zap, Clock } from 'lucide-react';
+import MarkupCard from './components/MarkupCard';
+import { Search, Plus, Zap, Clock, Filter } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
 const getEstadoEstilo = (nombre) => {
   const base = "px-3 py-1 text-[10px] font-black rounded-full border uppercase tracking-widest ";
   switch (nombre?.toLowerCase()) {
-    case 'abierto': return base + "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    case 'abierto': return base + "bg-sky-500/10 text-sky-400 border-sky-500/20";
     case 'en proceso': return base + "bg-warning/10 text-warning border-warning/20";
     case 'finalizado': return base + "bg-safe/10 text-safe border-safe/20";
-    default: return base + "bg-surface-light text-text-secondary border-border-dark";
+    case 'urgente': return base + "bg-urgent/10 text-urgent border-urgent/20";
+    default: return base + "bg-slate-800 text-slate-400 border-slate-700";
   }
 };
 
@@ -23,25 +25,35 @@ function App() {
   const [editingMarkup, setEditingMarkup] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [options, setOptions] = useState({ estados: [], tipos: [] });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchMarkups = useCallback(async (query = '') => {
-    setLoading(true);
+    if (markups.length === 0) setLoading(true);
     try {
       const res = await markupService.getAll(query);
-      setMarkups(res.data.results || res.data);
+      const data = res.data.results || res.data;
+      setMarkups(data);
     } catch (err) {
-      toast.error("Error de conexión");
+      toast.error("Error al sincronizar con el servidor");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [markups.length]);
+
+  const handleMarkupCreated = (newMarkup) => {
+    if (newMarkup && newMarkup.numero_parte) {
+      setMarkups(prev => [newMarkup, ...prev]);
+    } else {
+      fetchMarkups(searchQuery);
+    }
+  };
 
   useEffect(() => {
     const loadOptions = async () => {
       try {
         const [resEst, resTip] = await Promise.all([
           coreService.getEstados(),
-          coreService.getTipos() // Asegúrate de tener este método en api.js
+          coreService.getTipos()
         ]);
         setOptions({ 
           estados: resEst.data.results || resEst.data,
@@ -51,63 +63,80 @@ function App() {
     };
     loadOptions();
     fetchMarkups();
-  }, [fetchMarkups]);
+  }, []);
 
   return (
-    <div className="flex h-screen w-full bg-background-dark text-white font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-background-dark text-slate-50 font-sans overflow-hidden">
       <Toaster position="top-right" richColors theme="dark" />
       <Sidebar />
 
-      <main className="flex-1 flex flex-col h-full overflow-y-auto bg-surface-dark/40">
+      <main className="flex-1 flex flex-col h-full overflow-y-auto bg-background-dark/50">
         <header className="flex items-center justify-between px-8 py-6 border-b border-border-dark bg-surface-dark/80 backdrop-blur-md sticky top-0 z-10">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-white uppercase italic">MarkUp Tracker</h2>
-            <p className="text-text-secondary text-[10px] font-black uppercase tracking-widest">Navico Engineering</p>
+            <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Navico Engineering Group</p>
           </div>
+
           <div className="flex items-center gap-4">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
-              <input type="text" placeholder="Buscar P/N..." className="bg-surface-light/30 border border-border-dark rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary outline-none w-64" onChange={(e) => fetchMarkups(e.target.value)} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar por P/N..." 
+                className="bg-slate-900 border border-border-dark rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary outline-none w-72 transition-all"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  fetchMarkups(e.target.value);
+                }}
+              />
             </div>
-            <button onClick={() => setIsCreateModalOpen(true)} className="bg-primary text-background-dark px-5 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(97,237,220,0.3)]">
+            <button 
+              onClick={() => setIsCreateModalOpen(true)} 
+              className="bg-primary hover:bg-primary-hover text-background-dark px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all"
+            >
               <Plus size={18} /> Nuevo Registro
             </button>
           </div>
         </header>
 
         <div className="p-8 max-w-[1400px] mx-auto w-full space-y-8 pb-20">
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <StatCard label="Total Markups" value={markups.length} icon={<Zap size={18}/>} color="text-primary" />
-            <StatCard label="Abiertos" value={markups.filter(m => m.estado_detalle?.nombre === 'Abierto').length} icon={<Clock size={18}/>} color="text-blue-400" />
+          
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Total Registros" value={markups.length} icon={<Zap size={18}/>} color="text-primary" />
+            <StatCard label="Abiertos" value={markups.filter(m => m.estado_detalle?.nombre === 'Abierto').length} icon={<Clock size={18}/>} color="text-sky-400" />
+            <StatCard label="En Proceso" value={markups.filter(m => m.estado_detalle?.nombre === 'En Proceso').length} icon={<Filter size={18}/>} color="text-warning" />
+            <StatCard label="Completados" value={markups.filter(m => m.estado_detalle?.nombre === 'Finalizado').length} icon={<Zap size={18}/>} color="text-safe" />
           </section>
 
-          <div className="bg-surface-light/10 border border-border-dark rounded-2xl overflow-hidden shadow-xl">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-surface-light/40 text-text-secondary text-[10px] font-black uppercase tracking-widest border-b border-border-dark">
-                <tr>
-                  <th className="px-6 py-4">N° Parte / Rev</th>
-                  <th className="px-6 py-4">Responsable</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border-dark/30">
-                {markups.map((m) => (
-                  <tr key={m.id} className="hover:bg-white/5 transition-colors cursor-pointer" onClick={() => {setEditingMarkup(m); setIsModalOpen(true);}}>
-                    <td className="px-6 py-4 font-bold text-sm">{m.numero_parte} <span className="text-primary/50 text-xs ml-2">{m.nueva_revision}</span></td>
-                    <td className="px-6 py-4 text-sm text-text-secondary">{m.responsable_detalle?.nombre}</td>
-                    <td className="px-6 py-4"><span className={getEstadoEstilo(m.estado_detalle?.nombre)}>{m.estado_detalle?.nombre}</span></td>
-                    <td className="px-6 py-4 text-center text-text-secondary"><MessageSquare size={16} className="mx-auto" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {loading && <div className="p-10 text-center animate-pulse text-[10px] font-black uppercase tracking-[0.3em]">Cargando...</div>}
-          </div>
+          {/* CONTENEDOR DE GRIDS CORREGIDO */}
+          {loading && markups.length === 0 ? (
+            <div className="py-20 text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Sincronizando Base de Datos...</p>
+            </div>
+          ) : markups.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {markups.map((m) => (
+                <MarkupCard 
+                  key={m.id} 
+                  markup={m} 
+                  onClick={(item) => {
+                    setEditingMarkup(item);
+                    setIsModalOpen(true);
+                  }} 
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center text-slate-500 bg-surface-dark border border-border-dark rounded-2xl">
+              <p className="text-sm italic">No se encontraron registros para "{searchQuery}"</p>
+            </div>
+          )}
         </div>
       </main>
 
-      <MarkupFormModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onMarkupCreated={fetchMarkups} options={options} />
+      <MarkupFormModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onMarkupCreated={handleMarkupCreated} options={options} />
       
       {isModalOpen && (
         <EditMarkupModal 
@@ -123,10 +152,12 @@ function App() {
 }
 
 const StatCard = ({ label, value, icon, color }) => (
-  <div className="bg-surface-light/20 border border-border-dark rounded-2xl p-5 hover:border-primary/20 transition-all">
-    <div className={`p-2 w-fit rounded-xl bg-surface-dark mb-4 ${color}`}>{icon}</div>
-    <p className="text-text-secondary text-[10px] font-bold uppercase tracking-widest">{label}</p>
-    <p className="text-2xl font-black text-white mt-1">{value}</p>
+  <div className="bg-surface-dark border border-border-dark rounded-2xl p-6 hover:border-slate-600 transition-all shadow-lg group">
+    <div className={`p-2.5 w-fit rounded-xl bg-slate-950 border border-border-dark mb-4 ${color} group-hover:scale-110 transition-transform`}>
+      {icon}
+    </div>
+    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{label}</p>
+    <p className="text-3xl font-bold text-white mt-1">{value}</p>
   </div>
 );
 
