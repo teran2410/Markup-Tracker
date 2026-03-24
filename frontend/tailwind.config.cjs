@@ -7,21 +7,21 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Azul Ejecutivo (Cielo)
-        "primary": "#0EA5E9", 
-        "primary-hover": "#0284C7",
+        // Azul Profesional
+        "primary": "#2563EB", 
+        "primary-hover": "#1D4ED8",
         
-        // Estructura (Slate/Pizarra)
-        "background-dark": "#020617", // Casi negro, muy profundo
-        "surface-dark": "#0F172A",    // Gris azulado para Sidebar/Cards
-        "surface-light": "#1E293B",   // Gris medio para hovers/inputs
-        "border-dark": "#334155",     // Líneas finas y discretas
+        // Estructura Clara
+        "background-dark": "#F1F5F9", // Fondo gris claro
+        "surface-dark": "#FFFFFF",    // Cards/Sidebar blanco
+        "surface-light": "#F8FAFC",   // Hovers/inputs
+        "border-dark": "#E2E8F0",     // Bordes suaves
         
         // Tipografía y Estados
-        "text-secondary": "#94A3B8",  // Gris legible
-        "urgent": "#EF4444",          // Rojo coral profesional
-        "warning": "#F59E0B",         // Ámbar ejecutivo
-        "safe": "#10B981",            // Esmeralda 
+        "text-secondary": "#64748B",  // Gris medio
+        "urgent": "#DC2626",          // Rojo profesional
+        "warning": "#D97706",         // Ámbar oscuro
+        "safe": "#059669",            // Verde esmeralda
       },
     },
   },

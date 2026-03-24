@@ -4,31 +4,24 @@
 
 @layer base {
   :root {
-    /* MODO CLARO (Opcional por si lo implementas luego) */
-    --color-primary: #0284C7;
-    --color-background-dark: #F8FAFC;
+    --color-primary: #2563EB;
+    --color-primary-hover: #1D4ED8;
+    --color-background-dark: #F1F5F9;
     --color-surface-dark: #FFFFFF;
-    --color-surface-light: #F1F5F9;
+    --color-surface-light: #F8FAFC;
     --color-border-dark: #E2E8F0;
     --color-text-secondary: #64748B;
-  }
-
-  .dark {
-    /* MODO OSCURO EJECUTIVO */
-    --color-primary: #0EA5E9;
-    --color-primary-hover: #0284C7;
-    --color-background-dark: #020617;
-    --color-surface-dark: #0F172A;
-    --color-surface-light: #1E293B;
-    --color-border-dark: #334155;
-    --color-text-secondary: #94A3B8;
-    --color-urgent: #EF4444;
-    --color-warning: #F59E0B;
-    --color-safe: #10B981;
+    --color-urgent: #DC2626;
+    --color-warning: #D97706;
+    --color-safe: #059669;
   }
 }
 
-/* Tip: Agregué una transición suave para cuando cambies de vista */
-* {
-  @apply transition-colors duration-200;
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.25s ease-out;
 }

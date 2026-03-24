@@ -1,21 +1,18 @@
+// App.jsx
+
 import { useEffect, useState, useCallback } from 'react';
 import { markupService, coreService } from './services/api';
 import Sidebar from './components/Sidebar';
 import MarkupFormModal from './components/MarkupFormModal';
 import EditMarkupModal from './components/EditMarkupModal';
+import CommentDrawer from './components/CommentDrawer';
 import MarkupCard from './components/MarkupCard';
-import { Search, Plus, Zap, Clock, Filter } from 'lucide-react';
+import { Search, Plus, Zap, Clock, Filter, AlertTriangle } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
-const getEstadoEstilo = (nombre) => {
-  const base = "px-3 py-1 text-[10px] font-black rounded-full border uppercase tracking-widest ";
-  switch (nombre?.toLowerCase()) {
-    case 'abierto': return base + "bg-sky-500/10 text-sky-400 border-sky-500/20";
-    case 'en proceso': return base + "bg-warning/10 text-warning border-warning/20";
-    case 'finalizado': return base + "bg-safe/10 text-safe border-safe/20";
-    case 'urgente': return base + "bg-urgent/10 text-urgent border-urgent/20";
-    default: return base + "bg-slate-800 text-slate-400 border-slate-700";
-  }
+const calcDiasRestantes = (fecha) => {
+  if (!fecha) return null;
+  return Math.ceil((new Date(fecha) - new Date()) / (1000 * 60 * 60 * 24));
 };
 
 function App() {
@@ -24,8 +21,11 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMarkup, setEditingMarkup] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [options, setOptions] = useState({ estados: [], tipos: [] });
+  const [options, setOptions] = useState({ estados: [], tipos: [], empleados: [] });
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [filterResponsable, setFilterResponsable] = useState('');
+  const [commentMarkup, setCommentMarkup] = useState(null);
 
   const fetchMarkups = useCallback(async (query = '') => {
     if (markups.length === 0) setLoading(true);
@@ -48,16 +48,29 @@ function App() {
     }
   };
 
+  const handleDelete = async (markup) => {
+    if (!confirm(`¿Eliminar markup #${markup.id} - ${markup.numero_parte}?`)) return;
+    try {
+      await markupService.delete(markup.id);
+      setMarkups(prev => prev.filter(m => m.id !== markup.id));
+      toast.success('Markup eliminado correctamente');
+    } catch (err) {
+      toast.error('Error al eliminar el markup');
+    }
+  };
+
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const [resEst, resTip] = await Promise.all([
+        const [resEst, resTip, resEmp] = await Promise.all([
           coreService.getEstados(),
-          coreService.getTipos()
+          coreService.getTipos(),
+          coreService.getEmpleados()
         ]);
         setOptions({ 
           estados: resEst.data.results || resEst.data,
-          tipos: resTip.data.results || resTip.data 
+          tipos: resTip.data.results || resTip.data,
+          empleados: resEmp.data.results || resEmp.data
         });
       } catch (err) { console.error(err); }
     };
@@ -66,70 +79,92 @@ function App() {
   }, []);
 
   return (
-    <div className="flex h-screen w-full bg-background-dark text-slate-50 font-sans overflow-hidden">
-      <Toaster position="top-right" richColors theme="dark" />
+    <div className="flex h-screen w-full bg-background-dark text-slate-800 font-sans overflow-hidden">
+      <Toaster position="top-right" richColors />
       <Sidebar />
 
-      <main className="flex-1 flex flex-col h-full overflow-y-auto bg-background-dark/50">
-        <header className="flex items-center justify-between px-8 py-6 border-b border-border-dark bg-surface-dark/80 backdrop-blur-md sticky top-0 z-10">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-white uppercase italic">MarkUp Tracker</h2>
-            <p className="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Navico Engineering Group</p>
-          </div>
+      <main className="flex-1 flex flex-col h-full overflow-y-auto">
+        <div className="p-8 max-w-[1400px] mx-auto w-full space-y-6 pb-20">
+          
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Total Registros" value={markups.length} icon={<Zap size={18}/>} color="text-primary" />
+            <StatCard label="A Tiempo" value={markups.filter(m => { const d = calcDiasRestantes(m.fecha_compromiso); return d !== null && d >= 4; }).length} icon={<Clock size={18}/>} color="text-safe" />
+            <StatCard label="Urgentes" value={markups.filter(m => { const d = calcDiasRestantes(m.fecha_compromiso); return d !== null && d >= 1 && d <= 3; }).length} icon={<Filter size={18}/>} color="text-warning" />
+            <StatCard label="Vencidos" value={markups.filter(m => { const d = calcDiasRestantes(m.fecha_compromiso); return d !== null && d <= 0; }).length} icon={<Zap size={18}/>} color="text-urgent" />
+          </section>
 
-          <div className="flex items-center gap-4">
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors" size={18} />
+          {/* Barra de filtros */}
+          <div className="flex items-center gap-3">
+            <div className="relative group flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={16} />
               <input 
                 type="text" 
-                placeholder="Buscar por P/N..." 
-                className="bg-slate-900 border border-border-dark rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary outline-none w-72 transition-all"
+                placeholder="Número de parte..." 
+                className="w-full bg-white border border-border-dark rounded-xl py-2.5 pl-9 pr-4 text-sm text-slate-800 focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-slate-400"
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  fetchMarkups(e.target.value);
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <select
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+              className="bg-white border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:ring-1 focus:ring-primary outline-none transition-all min-w-[180px]"
+            >
+              <option value="">Todos los estados</option>
+              {options.estados.map(est => (
+                <option key={est.id} value={est.id}>{est.nombre}</option>
+              ))}
+            </select>
+            <select
+              value={filterResponsable}
+              onChange={(e) => setFilterResponsable(e.target.value)}
+              className="bg-white border border-border-dark rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:ring-1 focus:ring-primary outline-none transition-all min-w-[180px]"
+            >
+              <option value="">Todos los técnicos</option>
+              {options.empleados.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.nombre}</option>
+              ))}
+            </select>
+            <button 
+              onClick={() => fetchMarkups(searchQuery)}
+              className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm"
+            >
+              <Search size={16} /> Buscar
+            </button>
             <button 
               onClick={() => setIsCreateModalOpen(true)} 
-              className="bg-primary hover:bg-primary-hover text-background-dark px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all"
+              className="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-sm whitespace-nowrap ml-auto"
             >
               <Plus size={18} /> Nuevo Registro
             </button>
           </div>
-        </header>
 
-        <div className="p-8 max-w-[1400px] mx-auto w-full space-y-8 pb-20">
-          
-          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Total Registros" value={markups.length} icon={<Zap size={18}/>} color="text-primary" />
-            <StatCard label="Abiertos" value={markups.filter(m => m.estado_detalle?.nombre === 'Abierto').length} icon={<Clock size={18}/>} color="text-sky-400" />
-            <StatCard label="En Proceso" value={markups.filter(m => m.estado_detalle?.nombre === 'En Proceso').length} icon={<Filter size={18}/>} color="text-warning" />
-            <StatCard label="Completados" value={markups.filter(m => m.estado_detalle?.nombre === 'Finalizado').length} icon={<Zap size={18}/>} color="text-safe" />
-          </section>
-
-          {/* CONTENEDOR DE GRIDS CORREGIDO */}
+          {/* Grid de Markups */}
           {loading && markups.length === 0 ? (
             <div className="py-20 text-center">
               <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Sincronizando Base de Datos...</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Sincronizando Base de Datos...</p>
             </div>
           ) : markups.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {markups.map((m) => (
+              {markups
+                .filter(m => !filterEstado || String(m.estado) === filterEstado)
+                .filter(m => !filterResponsable || String(m.responsable) === filterResponsable)
+                .map((m) => (
                 <MarkupCard 
                   key={m.id} 
                   markup={m} 
-                  onClick={(item) => {
+                  onEdit={(item) => {
                     setEditingMarkup(item);
                     setIsModalOpen(true);
-                  }} 
+                  }}
+                  onDelete={handleDelete}
+                  onComment={(item) => setCommentMarkup(item)}
                 />
               ))}
             </div>
           ) : (
-            <div className="py-20 text-center text-slate-500 bg-surface-dark border border-border-dark rounded-2xl">
+            <div className="py-20 text-center text-slate-400 bg-white border border-border-dark rounded-2xl">
               <p className="text-sm italic">No se encontraron registros para "{searchQuery}"</p>
             </div>
           )}
@@ -147,17 +182,23 @@ function App() {
           onUpdate={fetchMarkups} 
         />
       )}
+
+      <CommentDrawer
+        markup={commentMarkup}
+        isOpen={!!commentMarkup}
+        onClose={() => setCommentMarkup(null)}
+      />
     </div>
   );
 }
 
 const StatCard = ({ label, value, icon, color }) => (
-  <div className="bg-surface-dark border border-border-dark rounded-2xl p-6 hover:border-slate-600 transition-all shadow-lg group">
-    <div className={`p-2.5 w-fit rounded-xl bg-slate-950 border border-border-dark mb-4 ${color} group-hover:scale-110 transition-transform`}>
+  <div className="bg-white border border-border-dark rounded-2xl p-6 hover:border-slate-300 transition-all shadow-sm group">
+    <div className={`p-2.5 w-fit rounded-xl bg-slate-50 border border-border-dark mb-4 ${color} group-hover:scale-110 transition-transform`}>
       {icon}
     </div>
-    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{label}</p>
-    <p className="text-3xl font-bold text-white mt-1">{value}</p>
+    <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">{label}</p>
+    <p className="text-3xl font-bold text-slate-800 mt-1">{value}</p>
   </div>
 );
 

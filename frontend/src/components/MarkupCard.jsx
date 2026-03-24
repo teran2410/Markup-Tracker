@@ -1,78 +1,150 @@
-import React from 'react';
-import { MessageSquare, User, Tag, Calendar, ChevronRight } from 'lucide-react';
+// MarkupCard.jsx
 
-const MarkupCard = ({ markup, onClick }) => {
-  // Colores según el estado (Paleta Slate & Sky)
-  const getStatusColors = (nombre) => {
-    switch (nombre?.toLowerCase()) {
-      case 'abierto': return 'border-sky-500 text-sky-400 bg-sky-500/5';
-      case 'en proceso': return 'border-amber-500 text-amber-400 bg-amber-500/5';
-      case 'finalizado': return 'border-emerald-500 text-emerald-400 bg-emerald-500/5';
-      default: return 'border-slate-700 text-slate-400 bg-slate-800/5';
-    }
+import React from 'react';
+import { Clock, Pencil, Trash2, MessageSquare } from 'lucide-react';
+
+const MarkupCard = ({ markup, onEdit, onDelete, onComment }) => {
+  // Función para calcular días restantes
+  const calcularDiasRestantes = (fechaCompromiso) => {
+    if (!fechaCompromiso) return null;
+    
+    const hoy = new Date();
+    const compromiso = new Date(fechaCompromiso);
+    const diferencia = Math.ceil((compromiso - hoy) / (1000 * 60 * 60 * 24));
+    
+    return diferencia;
   };
 
-  const statusStyle = getStatusColors(markup.estado_detalle?.nombre);
+  // Función para obtener estilo según tiempo restante
+  const getUrgenciaStyle = (dias) => {
+    if (dias === null) {
+      return { label: 'Sin fecha', badge: 'bg-slate-100 text-slate-400 border-slate-200', bar: 'bg-slate-300' };
+    }
+    if (dias <= 0) {
+      return { label: 'Vencido', badge: 'bg-urgent/10 text-urgent border-urgent/30', bar: 'bg-urgent' };
+    }
+    if (dias <= 3) {
+      return { label: 'Urgente', badge: 'bg-warning/10 text-warning border-warning/30', bar: 'bg-warning' };
+    }
+    return { label: 'A tiempo', badge: 'bg-safe/10 text-safe border-safe/30', bar: 'bg-safe' };
+  };
+
+  // Función para generar iniciales del responsable
+  const getIniciales = (nombre) => {
+    if (!nombre) return '??';
+    const palabras = nombre.trim().split(' ');
+    if (palabras.length === 1) return palabras[0].substring(0, 2).toUpperCase();
+    return (palabras[0][0] + palabras[palabras.length - 1][0]).toUpperCase();
+  };
+
+  const diasRestantes = calcularDiasRestantes(markup.fecha_compromiso);
+  const urgenciaStyle = getUrgenciaStyle(diasRestantes);
 
   return (
-    <div 
-      onClick={() => onClick(markup)}
-      className={`
-        relative group cursor-pointer
-        bg-surface-dark border border-border-dark rounded-2xl p-5
-        hover:border-slate-600 hover:shadow-2xl hover:shadow-sky-900/20
-        transition-all duration-300 transform hover:-translate-y-1
-        ${markup.isOptimistic ? 'opacity-60 grayscale' : ''}
-      `}
+    <div
+      className="relative group bg-white border border-border-dark rounded-2xl overflow-hidden hover:border-slate-300 hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300 transform hover:-translate-y-1"
     >
-      {/* Indicador de Estado Lateral */}
-      <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full border-l-4 ${statusStyle.split(' ')[0]}`} />
+      {/* Botones de acción (visibles en hover) */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+        <button
+          onClick={() => onComment(markup)}
+          className="p-1.5 rounded-lg bg-white border border-border-dark text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all shadow-sm"
+        >
+          <MessageSquare size={14} />
+        </button>
+        <button
+          onClick={() => onEdit(markup)}
+          className="p-1.5 rounded-lg bg-white border border-border-dark text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all shadow-sm"
+        >
+          <Pencil size={14} />
+        </button>
+        <button
+          onClick={() => onDelete(markup)}
+          className="p-1.5 rounded-lg bg-white border border-border-dark text-slate-400 hover:text-urgent hover:border-urgent/30 hover:bg-urgent/5 transition-all shadow-sm"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+      {/* Barra Lateral de Urgencia */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${urgenciaStyle.bar}`} />
 
-      <div className="space-y-4">
-        {/* Header de la Card */}
-        <div className="flex justify-between items-start">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">Part Number</span>
-            <h3 className="text-lg font-bold text-slate-100 group-hover:text-primary transition-colors tracking-tight font-mono">
-              {markup.numero_parte}
-            </h3>
-          </div>
-          <span className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-widest ${statusStyle}`}>
-            {markup.estado_detalle?.nombre}
+      {/* Contenido Principal */}
+      <div className="p-5 pl-6">
+        {/* Header: Badge de Urgencia + Revisión */}
+        <div className="flex items-center gap-3 mb-3">
+          <span className={`inline-block px-2.5 py-1 rounded-md border text-[9px] font-black uppercase tracking-[0.15em] ${urgenciaStyle.badge}`}>
+            {urgenciaStyle.label}
+          </span>
+          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">
+            {markup.nueva_revision ? `Rev ${markup.nueva_revision}` : 'Rev.00'}
           </span>
         </div>
 
-        {/* Descripción (Truncada para mantener grid uniforme) */}
-        <p className="text-sm text-slate-400 line-clamp-2 italic min-h-[40px]">
-          "{markup.descripcion || 'Sin descripción técnica disponible...'}"
-        </p>
+        {/* ID + Part Number */}
+        <h3 className="text-xl font-bold text-slate-800 mb-4 tracking-tight font-mono group-hover:text-primary transition-colors">
+          #{markup.id} - {markup.numero_parte}
+        </h3>
 
-        {/* Divider */}
-        <div className="h-px bg-slate-800/50 w-full" />
-
-        {/* Footer con Meta-data */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex items-center gap-2 text-slate-500">
-            <User size={14} className="text-slate-600" />
-            <span className="text-[11px] font-medium truncate">
-              {markup.responsable_detalle?.nombre || 'Sin asignar'}
-            </span>
+        {/* Responsable con Avatar */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-hover flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
+            {getIniciales(markup.responsable_detalle?.nombre)}
           </div>
-          <div className="flex items-center gap-2 text-slate-500 justify-end">
-            <Tag size={14} className="text-slate-600" />
-            <span className="text-[11px] font-medium">
-              {markup.tipo_detalle?.descripcion || 'General'}
+          <div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+              Responsable
+            </p>
+            <span className="text-sm font-semibold text-slate-700">
+              {markup.responsable_detalle?.nombre || 'Sin asignar'} - {markup.responsable_detalle?.numero_empleado || 'N/A'}
             </span>
           </div>
         </div>
 
-        {/* Acción Flotante Sutil */}
-        <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 uppercase">
-            <MessageSquare size={12} />
-            <span>Ver Logs</span>
+        {/* Divider */}
+        <div className="h-px bg-slate-200 mb-4" />
+
+        {/* Footer Grid: Tiempo Restante + Estado */}
+        <div className="grid grid-cols-2 gap-4">
+          {/* Tiempo Restante */}
+          <div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Tiempo Restante
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Clock 
+                size={14} 
+                className={diasRestantes !== null && diasRestantes < 0 ? 'text-urgent' : 'text-slate-500'} 
+              />
+              <span className={`text-sm font-bold ${
+                diasRestantes === null 
+                  ? 'text-slate-500' 
+                  : diasRestantes < 0 
+                    ? 'text-urgent' 
+                    : diasRestantes <= 3 
+                      ? 'text-warning' 
+                      : 'text-safe'
+              }`}>
+                {diasRestantes === null 
+                  ? 'Sin fecha' 
+                  : diasRestantes < 0 
+                    ? `-${Math.abs(diasRestantes)} Días` 
+                    : diasRestantes === 0 
+                      ? 'Hoy' 
+                      : `${diasRestantes} Días`
+                }
+              </span>
+            </div>
           </div>
-          <ChevronRight size={16} className="text-slate-700 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+
+          {/* Estado */}
+          <div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              Estado
+            </p>
+            <p className="text-sm font-bold text-slate-700">
+              {markup.estado_detalle?.nombre || 'Sin estado'}
+            </p>
+          </div>
         </div>
       </div>
     </div>

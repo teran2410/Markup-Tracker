@@ -17,6 +17,12 @@ export const markupService = {
   }),
   create: (data) => api.post('markups/', data),
   update: (id, data) => api.patch(`markups/${id}/`, data),
+  delete: (id) => api.delete(`markups/${id}/`),
+};
+
+export const commentService = {
+  getByMarkup: (markupId) => api.get('comentarios/', { params: { markup: markupId } }),
+  create: (data) => api.post('comentarios/', data),
 };
 
 export default api;
