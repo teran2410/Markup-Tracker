@@ -3,17 +3,11 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --color-primary: #2563EB;
-    --color-primary-hover: #1D4ED8;
-    --color-background-dark: #F1F5F9;
-    --color-surface-dark: #FFFFFF;
-    --color-surface-light: #F8FAFC;
-    --color-border-dark: #E2E8F0;
-    --color-text-secondary: #64748B;
-    --color-urgent: #DC2626;
-    --color-warning: #D97706;
-    --color-safe: #059669;
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
