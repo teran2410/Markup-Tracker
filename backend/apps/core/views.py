@@ -15,7 +15,7 @@ class EstadoMarkupViewSet(viewsets.ModelViewSet):
     serializer_class = EstadoMarkupSerializer
 
 class TipoMarkupViewSet(viewsets.ModelViewSet):
-    queryset = TipoMarkup.objects.all()
+    queryset = TipoMarkup.objects.all().order_by('id')
     serializer_class = TipoMarkupSerializer
 
 class EmpleadoViewSet(viewsets.ModelViewSet):

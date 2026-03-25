@@ -127,7 +127,7 @@ const MarkupCard = ({ markup, onEdit, onDelete, onComment }) => {
                 {diasRestantes === null 
                   ? 'Sin fecha' 
                   : diasRestantes < 0 
-                    ? `-${Math.abs(diasRestantes)} Días` 
+                    ? `${diasRestantes} Días` 
                     : diasRestantes === 0 
                       ? 'Hoy' 
                       : `${diasRestantes} Días`

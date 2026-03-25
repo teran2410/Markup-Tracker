@@ -57,6 +57,7 @@ class TipoMarkup(models.Model):
     descripcion = models.CharField(max_length=100)
 
     class Meta:
+        ordering = ['num_tipo']
         verbose_name = "Tipo de Markup"
         verbose_name_plural = "Tipos de Markup"
     
@@ -83,3 +84,6 @@ class Empleado(models.Model):
 
     def __str__(self):
         return f"{self.nombre} <{self.numero_empleado}>"
+
+    class Meta:
+        ordering = ['numero_empleado']
