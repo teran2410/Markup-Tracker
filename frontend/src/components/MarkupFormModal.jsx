@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, Package, Tag, Calendar, User, FileText, Check, AlertCircle, Link } from 'lucide-react';
 import { markupService } from '../services/api';
 import { toast } from 'sonner';
+import LoadingOverlay from './LoadingOverlay';
+import Tooltip, { TooltipLabel } from './Tooltip';
 
 const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
   const OSCAR_ID = 1;
@@ -136,7 +138,10 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error('Por favor corrige los errores');
+      toast.error('Formulario incompleto', {
+        description: `Hay ${Object.keys(newErrors).length} error(es) que corregir`,
+        duration: 3000,
+      });
       return;
     }
 
@@ -166,8 +171,11 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
         tipo_markup: parseInt(formData.tipo_markup)
       };
 
-      await markupService.create(payload);
-      toast.success("✓ Markup guardado exitosamente");
+      const response = await markupService.create(payload);
+      toast.success('¡Markup creado!', {
+        description: `${formData.numero_parte} Rev. ${formData.nueva_revision} registrado correctamente`,
+        duration: 3000,
+      });
       
       setFormData({
         numero_parte: '', nueva_revision: '', descripcion: '',
@@ -177,7 +185,11 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
       });
     } catch (err) {
       console.error("Error:", err.response?.data);
-      toast.error("Error al sincronizar con la base de datos");
+      const errorMsg = err.response?.data?.detail || err.response?.data?.error || 'Error desconocido';
+      toast.error('Error al guardar markup', {
+        description: errorMsg,
+        duration: 5000,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -220,9 +232,12 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
             <div className="bg-secondary/30 border border-border/50 rounded-lg p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">
-                    Número de parte <span className="text-destructive">*</span>
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold text-foreground">
+                      Número de parte <span className="text-destructive">*</span>
+                    </label>
+                    <Tooltip content="Ingresa el código único del componente. Formato típico: XXX-XXXXX-XXX (mínimo 5 caracteres)" />
+                  </div>
                   <input 
                     type="text" 
                     placeholder="Ej. 000-12345-001" 
@@ -240,9 +255,12 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground">
-                    Nueva revisión <span className="text-destructive">*</span>
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold text-foreground">
+                      Nueva revisión <span className="text-destructive">*</span>
+                    </label>
+                    <Tooltip content="Letra o número que identifica la versión del cambio (ej: A, B, C o 1, 2, 3). Máximo 3 caracteres." />
+                  </div>
                   <input 
                     type="text" 
                     required 
@@ -463,6 +481,11 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
             </div>
           </div>
         </form>
+
+        {/* Loading Overlay */}
+        {isSaving && (
+          <LoadingOverlay message="Guardando markup..." />
+        )}
       </div>
     </div>
   );
