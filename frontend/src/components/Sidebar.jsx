@@ -1,5 +1,6 @@
 // src/components/Sidebar.jsx
 import { LayoutDashboard, FileText, CheckCircle, BarChart3, Settings, LogOut, ChevronRight, Table2, Plus } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const NavItem = ({ icon, label, active = false, badge, onClick }) => (
   <button
@@ -26,6 +27,30 @@ const NavItem = ({ icon, label, active = false, badge, onClick }) => (
 );
 
 const Sidebar = ({ currentView, onViewChange }) => {
+  const { user, logout } = useAuth();
+
+  // Obtener iniciales del usuario
+  const getInitials = () => {
+    if (!user) return '??';
+    const names = (user.first_name || user.username || '').split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[1][0]}`.toUpperCase();
+    }
+    return (user.username || '??').substring(0, 2).toUpperCase();
+  };
+
+  // Nombre completo o username
+  const getDisplayName = () => {
+    if (!user) return 'Usuario';
+    return user.first_name && user.last_name
+      ? `${user.first_name} ${user.last_name}`
+      : user.username;
+  };
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <>
       {/* Desktop sidebar */}
@@ -51,17 +76,20 @@ const Sidebar = ({ currentView, onViewChange }) => {
 
           <div className="flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-secondary transition-colors cursor-pointer">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary to-blue-400 text-xs font-bold text-white">
-              OT
+              {getInitials()}
             </div>
             <div className="flex flex-col flex-1 min-w-0">
-              <span className="text-sm font-medium text-foreground truncate">Oscar Teran</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                Technical Developer
+              <span className="text-sm font-medium text-foreground truncate">{getDisplayName()}</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">
+                {user?.email || user?.username || ''}
               </span>
             </div>
           </div>
 
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+          >
             <LogOut size={18} />
             <span className="text-sm font-medium">Cerrar Sesión</span>
           </button>

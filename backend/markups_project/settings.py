@@ -33,6 +33,7 @@ INSTALLED_APPS = [
 
     # Librerías externas
     'rest_framework',              # Django REST Framework: construye APIs REST
+    'rest_framework_simplejwt.token_blacklist',  # Blacklist de tokens JWT revocados
     'corsheaders',                 # Permite que el frontend (otro dominio) llame al backend
 
     # Nuestras apps (prefijo apps. porque están en la carpeta apps/)
@@ -86,11 +87,10 @@ DATABASES = {
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps.authentication.authentication.JWTCookieAuthentication',  # 🍪 Lee JWT de cookies httpOnly
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        # 'rest_framework.permissions.IsAuthenticated',
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',  # 🔒 Ahora TODOS los endpoints requieren autenticación
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
@@ -103,7 +103,7 @@ REST_FRAMEWORK = {
 # - 7 días: si el usuario usa la app en una semana, no necesita volver a loguearse.
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # 7 días = 604800 segundos
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
