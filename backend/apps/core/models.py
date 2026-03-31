@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 class Rol(models.Model):
     # Rol de un empleado (p. ej. técnico, supervisor, admin).
@@ -74,6 +75,14 @@ class Empleado(models.Model):
     - `user_id` puede mapearse al `id` del usuario de Azure AD o al `auth.User` cuando lo integremos.
     - `activo` permite desactivar empleados sin borrarlos (importante para auditoría).
     """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='empleado',
+        help_text='Cuenta de acceso vinculada a este empleado',
+    )
     nombre = models.CharField(max_length=150)
     numero_empleado = models.CharField(max_length=20, unique=True)
     email = models.EmailField(unique=True)

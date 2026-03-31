@@ -18,7 +18,7 @@ DEBUG = env('DEBUG')
 
 # ALLOWED_HOSTS: lista de dominios que pueden acceder al backend.
 # En desarrollo usamos localhost. En producción va el dominio real.
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 
 # Orden: primero las de Django, luego librerías externas, luego las nuestras.
@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'rest_framework',              # Django REST Framework: construye APIs REST
     'rest_framework_simplejwt.token_blacklist',  # Blacklist de tokens JWT revocados
     'corsheaders',                 # Permite que el frontend (otro dominio) llame al backend
+    'django_filters',              # Filtros server-side para DRF
 
     # Nuestras apps (prefijo apps. porque están en la carpeta apps/)
     'apps.core',
@@ -52,6 +53,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.audit.middleware.AuditMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -92,6 +94,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',  # 🔒 Ahora TODOS los endpoints requieren autenticación
     ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
 }
@@ -109,15 +116,27 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# En producción el dominio real irá aquí (ej: https://mi-app.vercel.app)
-CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',   # Vite dev server
+# En producción: CORS_ALLOWED_ORIGINS=https://mi-app.vercel.app,https://otro.com
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
+    'http://localhost:5173',
     'http://127.0.0.1:5173',
-    'http://localhost:3000',   # Por si usas Create React App o puerto alternativo
-]
+    'http://localhost:3000',
+])
 
 # Permite que el frontend envíe cookies/credenciales en los requests
 CORS_ALLOW_CREDENTIALS = True
+
+# ---------------------------------------------------------------------------
+# RATE LIMITING (Throttling)
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = [
+    'rest_framework.throttling.AnonRateThrottle',
+    'rest_framework.throttling.UserRateThrottle',
+]
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
+    'anon': '30/minute',    # Requests sin autenticar (login, refresh)
+    'user': '120/minute',   # Requests autenticados
+}
 
 # ---------------------------------------------------------------------------
 # VALIDACIÓN DE CONTRASEÑAS
@@ -145,5 +164,26 @@ STATIC_URL = 'static/'
 # ---------------------------------------------------------------------------
 # CLAVE PRIMARIA POR DEFECTO
 # ---------------------------------------------------------------------------
-# - AutoField usa enteros de 32 bits (máximo ~2 mil millones de registros)
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ---------------------------------------------------------------------------
+# SEGURIDAD EN PRODUCCIÓN (se activan cuando DEBUG=False)
+# ---------------------------------------------------------------------------
+if not DEBUG:
+    # HTTPS — redirigir todo HTTP → HTTPS
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # HSTS — indicar al navegador que siempre use HTTPS
+    SECURE_HSTS_SECONDS = 31536000       # 1 año
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Cookies de sesión/CSRF seguras
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    # Protección contra clickjacking y XSS
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'

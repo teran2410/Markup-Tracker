@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny
 from apps.core.views import AreaViewSet, RolViewSet, EstadoMarkupViewSet, EmpleadoViewSet, TipoMarkupViewSet
 from apps.markups.views import MarkupViewSet
 from apps.comments.views import ComentarioViewSet
+from apps.audit.views import AuditLogViewSet
 
 @api_view(['GET'])
 @permission_classes([AllowAny])  # Público - usado por load balancers
@@ -22,6 +23,7 @@ router.register(r'empleados', EmpleadoViewSet, basename='empleado')
 router.register(r'tipos-markup', TipoMarkupViewSet, basename='tipo-markup')
 router.register(r'markups', MarkupViewSet, basename='markup')
 router.register(r'comentarios', ComentarioViewSet, basename='comentario')
+router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

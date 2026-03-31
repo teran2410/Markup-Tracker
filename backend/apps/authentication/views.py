@@ -1,11 +1,15 @@
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.conf import settings as django_settings
 from .serializers import UserSerializer
+
+# Flags de cookies dinámicos según entorno
+_COOKIE_SECURE = not django_settings.DEBUG          # True en producción (HTTPS)
+_COOKIE_SAMESITE = 'None' if _COOKIE_SECURE else 'Lax'  # None requiere Secure=True
 
 # ========================================
 # Endpoint 1: Login (obtener token)
@@ -60,20 +64,20 @@ def login(request):
     response.set_cookie(
         key='access_token',
         value=access_token,
-        httponly=True,        # No accesible desde JavaScript
-        secure=False,         # False para desarrollo local (cambiar a True en producción HTTPS)
-        samesite='None' if False else 'Lax',  # None requiere secure=True, usamos Lax para desarrollo
-        max_age=3600,         # 1 hora (igual que ACCESS_TOKEN_LIFETIME)
-        domain=None,          # None = cookie disponible solo para el dominio actual
+        httponly=True,
+        secure=_COOKIE_SECURE,
+        samesite=_COOKIE_SAMESITE,
+        max_age=3600,
+        domain=None,
     )
     
     response.set_cookie(
         key='refresh_token',
         value=refresh_token,
         httponly=True,
-        secure=False,         # False para desarrollo local
-        samesite='None' if False else 'Lax',
-        max_age=604800,       # 7 días (igual que REFRESH_TOKEN_LIFETIME)
+        secure=_COOKIE_SECURE,
+        samesite=_COOKIE_SAMESITE,
+        max_age=604800,
         domain=None,
     )
     
@@ -114,8 +118,8 @@ def refresh_token(request):
             key='access_token',
             value=access_token,
             httponly=True,
-            secure=False,
-            samesite='None' if False else 'Lax',
+            secure=_COOKIE_SECURE,
+            samesite=_COOKIE_SAMESITE,
             max_age=3600,
             domain=None,
         )

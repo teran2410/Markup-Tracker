@@ -20,6 +20,7 @@ class MarkupSerializer(serializers.ModelSerializer):
             'estado', 'estado_detalle', 'tipo_markup', 'tipo_markup_detalle', 'comentarios',
             'fecha_creacion', 'fecha_compromiso', 'fecha_registro'
         ]
+        read_only_fields = ['responsable']
 
     # Campo de entrada opcional: fecha_registro (write-only)
     fecha_registro = serializers.DateField(write_only=True, required=False)

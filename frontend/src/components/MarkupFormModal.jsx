@@ -6,9 +6,11 @@ import { markupService } from '../services/api';
 import { toast } from 'sonner';
 import LoadingOverlay from './LoadingOverlay';
 import Tooltip, { TooltipLabel } from './Tooltip';
+import { useAuth } from '../context/AuthContext';
 
 const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
-  const OSCAR_ID = 1;
+  const { user } = useAuth();
+  const empleado = user?.empleado;
 
   // Helpers para fechas
   const getTodayISO = () => new Date().toISOString().slice(0, 10);
@@ -55,7 +57,6 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
     nueva_revision: '',
     descripcion: '',
     url_archivo: '',
-    responsable: OSCAR_ID,
     tipo_markup: '',
     fecha_registro: getTodayISO(),
     fecha_compromiso: addBusinessDays(getTodayISO(), 7)
@@ -68,7 +69,6 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
     if (isOpen) {
       setFormData(prev => ({
         ...prev,
-        responsable: OSCAR_ID,
         fecha_registro: getTodayISO(),
         fecha_compromiso: addBusinessDays(getTodayISO(), 7)
       }));
@@ -154,7 +154,7 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
       numero_parte: formData.numero_parte,
       nueva_revision: formData.nueva_revision,
       descripcion: formData.descripcion,
-      responsable_detalle: { nombre: "Oscar Teran" },
+      responsable_detalle: { nombre: empleado?.nombre || user?.username || 'Usuario' },
       estado_detalle: { nombre: "Abierto" },
       tipo_markup_detalle: { descripcion: tipoSeleccionado?.descripcion || '' },
       isOptimistic: true
@@ -167,7 +167,6 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
       const payload = {
         ...formData,
         estado: 1,
-        responsable: parseInt(formData.responsable),
         tipo_markup: parseInt(formData.tipo_markup)
       };
 
@@ -179,7 +178,7 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
       
       setFormData({
         numero_parte: '', nueva_revision: '', descripcion: '',
-        url_archivo: '', responsable: OSCAR_ID, tipo_markup: '', 
+        url_archivo: '', tipo_markup: '', 
         fecha_registro: getTodayISO(),
         fecha_compromiso: addBusinessDays(getTodayISO(), 7)
       });
@@ -403,11 +402,11 @@ const MarkupFormModal = ({ isOpen, onClose, onMarkupCreated, options }) => {
             <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg p-5">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-lg">
-                  OT
+                  {empleado?.nombre ? empleado.nombre.split(' ').map(n => n[0]).join('').slice(0, 2) : (user?.username?.[0]?.toUpperCase() || '?')}
                 </div>
                 <div>
-                  <div className="font-bold text-foreground">Oscar Teran</div>
-                  <div className="text-sm text-muted-foreground">ID: {OSCAR_ID} · Ingeniero</div>
+                  <div className="font-bold text-foreground">{empleado?.nombre || user?.first_name + ' ' + user?.last_name || user?.username}</div>
+                  <div className="text-sm text-muted-foreground">{empleado ? `#${empleado.numero_empleado} · ${empleado.rol}` : user?.username}</div>
                 </div>
               </div>
             </div>

@@ -14,5 +14,6 @@ fases_implementacion.md
 # caché de python y node
 __pycache__/
 node_modules/
+backend/test_auth_cookies.py
 
 propuesta.md
